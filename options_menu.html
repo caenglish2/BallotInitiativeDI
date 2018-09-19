@@ -16,37 +16,20 @@
     <div class="container">
       <div class="row">
         <div class="col-lg-12 text-left">
-          <h4>Select a funding means (if applicable)</h4>
+          <h4>Select ballot question purpose</h4>
         </div>
       </div>
       <div class="row">
         <div class="col-lg-12 text-left">
-          <select>
-  		<option value="s">Property Tax</option>
-  		<option value="saab">Sales Tax</option>
-  		<option value="mercedes">Business Tax</option>
-  		<option value="audi">N/A</option>
+	  <form name='issue' id='input' method='post' action='graph'>
+          <select name='dropdown'>
+  		<option value="property_tax">Property Tax Increase</option>
+  		<option value="sales_tax">Sales Tax Increase</option>
+  		<option value="business_tax">Business Tax Increase</option>
 	 </select>
-	</div>
-    <div class="container">
-      <div class="row">
-        <div class="col-lg-12 text-left">
-          <h4>Select the issue</h4>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-lg-12 text-left">
-          <select>
-  	        <option value="s">Education</option>
-  	        <option value="saab">Infrastructure</option>
-  	        <option value="mercedes">Police</option>
-  	        <option value="audi">Fire</option>
-  	        <option value="paramedic">Paramedics</option>
-  	        <option value="na">N/A</option>
-	 </select>
-	</div>
-	  </div>
-            <p>
+          <h4>Where does the vote take place?</h4>
+          <p>State Two Letter Code: <input type='text' name='state' placeholder='NY' /></p>
+          <p>County Name<input type='text' name='county' placeholder='Rensselaer' /></p>
             <p><input type="submit" value="Submit"></p>
             </form>
           </div>

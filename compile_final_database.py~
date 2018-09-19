@@ -1,0 +1,8 @@
+#!/bin/python
+import pandas as pd
+
+questiondata=pd.read_csv('ballot_questions/ballot_issues.csv')
+#2016data=pd.read_csv('county_votes/2016_votes.dat')
+
+print(questiondata.head())
+#print(2016data.head())

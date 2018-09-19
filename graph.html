@@ -1,0 +1,21 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="//cdn.pydata.org/bokeh/release/bokeh-0.13.0.min.css" type="text/css" />
+    <script type="text/javascript" src="//cdn.pydata.org/bokeh/release/bokeh-0.13.0.min.js"></script>
+    {{ script | safe }}
+  </head>
+  <body>
+    <div class=page>
+      <h1>Model Results</h1>
+      <h3>Generalized linear model predicts yes vote of: {{ GLM_predict }}%, R^2 = {{GLM_R2}}</h3>
+      <h1>Outcome correlated with Clinton margin of victory/defeat in 2016?</h1>
+      <h3>Clinton margin of victory/defeat in 2016 for county: {{vict_marg}}%</h3>
+      <h3>Pearson Correlation Coefficient: {{ pcc }}, p value = {{pcc_p}}</h3>
+      <h3>Spearman Correlation Coefficient: {{ scc }}, p value = {{pcc_p}}</h3>
+      <h1>Outcome correlated with per capita income?</h1>
+      <h3>Per capita income for chosen county: ${{per_capita_income}}</h3>
+      <h3>Pearson Correlation Coefficient: {{ pcc2 }}, p value = {{pcc_p2}}</h3>
+      <h3>Spearman Correlation Coefficient: {{ scc2 }}, p value = {{pcc_p2}}</h3>
+    </div>
+  </body>
+</html>
