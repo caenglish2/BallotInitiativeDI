@@ -10,7 +10,7 @@ from scipy.stats import spearmanr
 from sklearn.linear_model import LinearRegression
 
 
-issue='property_tax'
+issue='legalize_marijuana'
 state='CA'
 county='Los Angeles'
 
@@ -18,7 +18,7 @@ data=pd.read_csv('data_train.csv')
 data['clinton_margin']=data['CLINTON_%']-data['TRUMP_%']
 max_income=data['PER_CAPITA_INCOME'].max()
 data['PER_CAPITA_INCOME']=data['PER_CAPITA_INCOME']/max_income
-data=data[data['%s'%issue]==1]
+data=data[data['Issue']==issue]
 
 data_train=data.ix[:, ['clinton_margin','PER_CAPITA_INCOME']]
 y_train=data['PERCENT'].astype(float)/100.0
