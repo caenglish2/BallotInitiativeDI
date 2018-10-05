@@ -11,13 +11,15 @@ from sklearn.linear_model import LinearRegression
 
 from bokeh.io import show, output_file
 from bokeh.models import LogColorMapper
-from bokeh.models import ColorMapper
+from bokeh.models import LinearColorMapper
 from bokeh.palettes import Spectral6 as palette
 #from bokeh.palettes import Viridis6 as palette
 from bokeh.plotting import figure
 import math
 
 
+palette=['#ff0000','#ff1a1a','#ff3333','#ff4d4d','#ff6666','#ff8080','#ff9999','#ffb3b3','#ffcccc','#ffe6e6','#bfbfbf','#e6e6ff','#ccccff','#b3b3ff','#9999ff','#8080ff','#6666ff','#4d4dff','#3333ff','#1a1aff','#0000ff']
+#palette=[]
 from bokeh.sampledata.unemployment import data as unemployment
 
 app = Flask(__name__)
@@ -31,8 +33,8 @@ def plot(location, predictions,state_name):
 	county_names = [county['name'] for county in counties.values()]#Make sure names match with data
 
 	county_rates = [unemployment[county_id] for county_id in counties]#These would be the predictions
-	color_mapper = LogColorMapper(palette=palette)
-
+	#color_mapper = LogColorMapper(palette=palette)
+	color_mapper = LinearColorMapper(palette=palette,low=25, high=75)
 	data=dict(x=county_xs,y=county_ys,name=county_names,rate=predictions,)
 	TOOLS = "pan,wheel_zoom,reset,hover,save"
 
@@ -59,11 +61,17 @@ def plot_corr(pcc):
 	factors = [ i[1] for i in x ]
 	pcc = [ i[0] for i in x ]
 	source = ColumnDataSource(data=dict(factors=factors, pcc=pcc))
-	p = figure(x_range=factors, plot_height=500, title="",toolbar_location=None, tools="")
+	p = figure(x_range=factors, plot_height=700, title="",toolbar_location=None, tools="")
 
 	p.vbar(x=factors, top=pcc, width=0.9)
 	p.xaxis.major_label_orientation = math.pi/2
 	p.xgrid.grid_line_color = None
+
+	p.yaxis.axis_label="PCC"
+	
+	p.yaxis.axis_label_text_font_size = "20pt"
+	p.yaxis.major_label_text_font_size = "15pt"
+	p.xaxis.major_label_text_font_size = "15pt"
 	p.y_range.start = -1
 	p.y_range.end = 1
 
@@ -118,8 +126,10 @@ def analysis(issue, state, county):
 	statename_to_abbr = {'District of Columbia': 'DC','Alabama': 'AL','Montana': 'MT','Alaska': 'AK','Nebraska': 'NE','Arizona': 'AZ','Nevada': 'NV','Arkansas': 'AR','NewHampshire': 'NH','California': 'CA','NewJersey': 'NJ','Colorado': 'CO','NewMexico': 'NM','Connecticut': 'CT','NewYork': 'NY','Delaware': 'DE','NorthCarolina': 'NC','Florida': 'FL','NorthDakota': 'ND','Georgia': 'GA','Ohio': 'OH','Hawaii': 'HI','Oklahoma': 'OK','Idaho': 'ID','Oregon': 'OR','Illinois': 'IL','Pennsylvania': 'PA','Indiana': 'IN','RhodeIsland': 'RI','Iowa': 'IA','SouthCarolina': 'SC','Kansas': 'KS','SouthDakota': 'SD','Kentucky': 'KY','Tennessee': 'TN','Louisiana': 'LA','Texas': 'TX','Maine': 'ME','Utah': 'UT','Maryland': 'MD','Vermont': 'VT','Massachusetts': 'MA','Virginia': 'VA','Michigan': 'MI','Washington': 'WA','Minnesota': 'MN','WestVirginia': 'WV','Mississippi': 'MS','Wisconsin': 'WI','Missouri': 'MO','Wyoming': 'WY'}
 	keys=counties.keys()
 	locations=[]
+	state_id_abbr_conv={'AL':1,'AZ':4,'AR':5,'CA':6,'CO':8,'CT':9,'DE':10,'FL':12,'GA':13,'ID':16,'IL':17,'IN':18,'KS':20,'LA':22,'ME':23,'MD':24,'MA':25,'MS':28,'MO':29,'NE':31,'NJ':34,'NY':36,'NC':37,'OH':39,'OR':41,'PA':42,'RI':44,'SC':45,'SD':46,'TN':47,'TX':48,'UT':49,'VT':50,'WV':54,'WI':55}
+	state_id=state_id_abbr_conv[state]
 	for i in keys:
-		if i[0]==24:#Need to add 2-AK, 11-DC (no data),15 HI - Maui, 19-IO no data, 21 KY -no data, 26 -MI need data, MN - need data, 30 - MT need data, 32 NV - need data, 33 - NH need data, NM - need data, 38 - ND need data, 40 -OK need data, 46 -SD meeds data, 51, VA - need data (download), 53 WA need data
+		if i[0]==state_id:#Need to add 2-AK, 11-DC (no data),15 HI - Maui, 19-IO no data, 21 KY -no data, 26 -MI need data, MN - need data, 30 - MT need data, 32 NV - need data, 33 - NH need data, NM - need data, 38 - ND need data, 40 -OK need data, 51, VA - need data (download), 53 WA need data
 			name=counties[i]['detailed name'].split(',')
 			name[0]=name[0].replace(' ','').replace('County','').replace('Parish','')
 			name[1]=name[1].replace(' ','')
