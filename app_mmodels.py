@@ -23,9 +23,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.utils import shuffle
 from sklearn.model_selection import cross_val_score
-
+from sklearn.neural_network import MLPRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import ElasticNet
+from sklearn.linear_model import BayesianRidge
+import heapq
+from bokeh.models import LogColorMapper, LogTicker, ColorBar
 palette=['#ff0000','#ff1a1a','#ff3333','#ff4d4d','#ff6666','#ff8080','#ff9999','#ffb3b3','#ffcccc','#ffe6e6','#bfbfbf','#e6e6ff','#ccccff','#b3b3ff','#9999ff','#8080ff','#6666ff','#4d4dff','#3333ff','#1a1aff','#0000ff']
-#palette=[]
 from bokeh.sampledata.unemployment import data as unemployment
 
 app = Flask(__name__)
@@ -37,9 +41,8 @@ def plot(location, predictions,state_name):
 	county_xs = [county["lons"] for county in counties.values()]
 	county_ys = [county["lats"] for county in counties.values()]
 	county_names = [county['name'] for county in counties.values()]#Make sure names match with data
-
+	print(county_names)
 	county_rates = [unemployment[county_id] for county_id in counties]#These would be the predictions
-	#color_mapper = LogColorMapper(palette=palette)
 	color_mapper = LinearColorMapper(palette=palette,low=25, high=75)
 	data=dict(x=county_xs,y=county_ys,name=county_names,rate=predictions,)
 	TOOLS = "pan,wheel_zoom,reset,hover,save"
@@ -47,6 +50,9 @@ def plot(location, predictions,state_name):
 	p = figure(title="Vote Preference Predictions", tools=TOOLS, plot_width=900,
 	#x_axis_location=None, y_axis_location=None,tooltips=[("Name", "@name"), ("Unemployment rate)", "@rate%"), ("(Long, Lat)", "($x, $y)")])
 	x_axis_location=None, y_axis_location=None,tooltips=[("Name", "@name"), ("Yes vote (percent)", "@rate%")])
+
+	color_bar = ColorBar(color_mapper=color_mapper, ticker=LogTicker(),label_standoff=12, border_line_color=None, location=(0,0))
+	p.add_layout(color_bar, 'right')
 
 	p.grid.grid_line_color = None
 	p.hover.point_policy = "follow_mouse"
@@ -143,33 +149,59 @@ def analysis(issue, state, county):
 	LLR_R2=LLR.score(data_train, y_train)
 	CV_LLR = cross_val_score(LLR, data_train, y_train, cv=2)
 
-	
+	ELN = ElasticNet(alpha=0.0001)
+	ELN.fit(data_train, y_train)
+	ELN_R2=ELN.score(data_train, y_train)
+	CV_ELN = cross_val_score(ELN, data_train, y_train, cv=2)
+
+	BRR = BayesianRidge(alpha_1=0.1,alpha_2=0.1)
+	BRR.fit(data_train, y_train)
+	BRR_R2=BRR.score(data_train, y_train)
+	CV_BRR = cross_val_score(BRR, data_train, y_train, cv=2)
+
 	KNN = neighbors.KNeighborsRegressor(n_neighbors=10)
 	KNN.fit(data_train, y_train)
 	KNN_R2=KNN.score(data_train, y_train)
 	scoresKNN = cross_val_score(KNN, data_train, y_train, cv=2)
 
-	from sklearn.ensemble import RandomForestRegressor
 	RFR = RandomForestRegressor(n_estimators=500, max_depth=12)
-	#RFR = RandomForestRegressor(n_estimators=500, max_depth=7)
 	RFR.fit(data_train, y_train)
 	scoresRFR = cross_val_score(RFR, data_train, y_train, cv=2)
 	mod3=RFR.predict(data_train)
 
-	#plt.scatter((mod1+mod2+mod3)/3.0,y_train,s=1)
-	plt.scatter(mod3,y_train,s=1)
-	plt.xlim(0,1)
-	plt.ylim(0,1)
-	plt.plot(np.arange(0,1,0.1),np.arange(0,1,0.1))
-	plt.show()
 
+	#MLPR=MLPRegressor(hidden_layer_sizes=(5,5), activation='relu', solver='adam', alpha=0.0001)
+	#MLPR.fit(data_train, y_train)
+	#scoresMLPR = cross_val_score(MLPR, data_train, y_train, cv=2)
+	#mod4=MLPR.predict(data_train)
 
+	#plt.scatter((mod3)/3.0,y_train,s=1)
+	#plt.scatter(mod3,y_train,s=1)
+	#plt.xlim(0,1)
+	#plt.ylim(0,1)
+	#plt.plot(np.arange(0,1,0.1),np.arange(0,1,0.1))
+	#plt.show()
 
-	print('GLR:',CV_GLR, GLR_R2, GLR.coef_)
-	print('Ridge: ',CV_LRR, LRR_R2, LRR.coef_)
-	print('Lasso: ',CV_LLR, LLR_R2, LLR.coef_)
-	print('KNN: ', scoresKNN, KNN_R2)
-	print('RFR: ', scoresRFR, RFR.feature_importances_)
+	h=[]
+	heapq.heappush(h, (np.mean(CV_GLR),'GLR'))
+	heapq.heappush(h, (np.mean(CV_LRR),'LRR'))
+	heapq.heappush(h, (np.mean(CV_LLR),'LLR'))
+	heapq.heappush(h, (np.mean(CV_ELN),'ELN'))
+	heapq.heappush(h, (np.mean(CV_BRR),'BRR'))
+	heapq.heappush(h, (np.mean(scoresKNN),'KNN'))
+	heapq.heappush(h, (np.mean(scoresRFR),'RFR'))
+
+	print('GLR:',CV_GLR, np.mean(CV_GLR), GLR_R2, GLR.coef_)
+	print('Ridge: ',CV_LRR, np.mean(CV_LRR), LRR_R2, LRR.coef_)
+	print('Lasso: ',CV_LLR, np.mean(CV_LLR), LLR_R2, LLR.coef_)
+	print('ELN: ',CV_ELN, np.mean(CV_ELN), ELN_R2, ELN.coef_)
+	print('BRR: ',CV_BRR, np.mean(CV_BRR), BRR_R2, BRR.coef_)
+	print('KNN: ', scoresKNN, np.mean(scoresKNN), KNN_R2)
+	print('RFR: ', scoresRFR, np.mean(scoresRFR), RFR.feature_importances_)
+
+	best_model=heapq.nlargest(1,h)
+	model_code=best_model[0][1]
+	print(model_code)
 
 	from bokeh.sampledata.us_counties import data as counties
 	statename_to_abbr = {'District of Columbia': 'DC','Alabama': 'AL','Montana': 'MT','Alaska': 'AK','Nebraska': 'NE','Arizona': 'AZ','Nevada': 'NV','Arkansas': 'AR','NewHampshire': 'NH','California': 'CA','NewJersey': 'NJ','Colorado': 'CO','NewMexico': 'NM','Connecticut': 'CT','NewYork': 'NY','Delaware': 'DE','NorthCarolina': 'NC','Florida': 'FL','NorthDakota': 'ND','Georgia': 'GA','Ohio': 'OH','Hawaii': 'HI','Oklahoma': 'OK','Idaho': 'ID','Oregon': 'OR','Illinois': 'IL','Pennsylvania': 'PA','Indiana': 'IN','RhodeIsland': 'RI','Iowa': 'IA','SouthCarolina': 'SC','Kansas': 'KS','SouthDakota': 'SD','Kentucky': 'KY','Tennessee': 'TN','Louisiana': 'LA','Texas': 'TX','Maine': 'ME','Utah': 'UT','Maryland': 'MD','Vermont': 'VT','Massachusetts': 'MA','Virginia': 'VA','Michigan': 'MI','Washington': 'WA','Minnesota': 'MN','WestVirginia': 'WV','Mississippi': 'MS','Wisconsin': 'WI','Missouri': 'MO','Wyoming': 'WY'}
@@ -196,7 +228,13 @@ def analysis(issue, state, county):
 	for place in locations:
 		PredictX=county_lookup[county_lookup['STATE_COUNTY']==place]
 		PredictX=PredictX.ix[:, ['clinton_margin','PER_CAPITA_INCOME','UNINSURED_RATE','SOME_COLLEGE','AFAMERPER','WHITESPER','ASIANPER','HISPANICPER','PERSENIORS','POVERTY_RATE','INCINEQUALITY','UNEMP_RATE','RURAL_POP','CITIZENS']]
-		GLR_predict=RFR.predict(PredictX)*100.0
+		if model_code=='GLR': GLR_predict=GLR.predict(PredictX)*100.0
+		elif model_code=='LRR': GLR_predict=LRR.predict(PredictX)*100.0
+		elif model_code=='LLR': GLR_predict=LLR.predict(PredictX)*100.0
+		elif model_code=='ELN': GLR_predict=ELN.predict(PredictX)*100.0
+		elif model_code=='BRR': GLR_predict=BRR.predict(PredictX)*100.0
+		elif model_code=='KNN': GLR_predict=KNN.predict(PredictX)*100.0
+		elif model_code=='RFR': GLR_predict=RFR.predict(PredictX)*100.0
 		predictions.append(round(GLR_predict[0]))
 	script, div=plot(locations, predictions, state_name)
 	script_coor, div_corr=plot_corr(pcc)

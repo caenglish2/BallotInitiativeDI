@@ -8,6 +8,9 @@ from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.neural_network import MLPRegressor
+from sklearn.model_selection import cross_val_score
+from sklearn.utils import shuffle
 
 data=pd.read_csv('data_train.csv')
 data['clinton_margin']=data['CLINTON_%']-data['TRUMP_%']
@@ -29,6 +32,14 @@ des=X.describe()
 
 pca = PCA(n_components=2)
 pca.fit(X)
+X=shuffle(X)
+#Let's try an autoencoder
+MLPR=MLPRegressor(hidden_layer_sizes=(15,12,10,12,15), activation='relu', solver='adam', alpha=0.0001)
+MLPR.fit(X, X)
+scoresMLPR = cross_val_score(MLPR, X, X, cv=2)
+mod4=MLPR.predict(X)
+print('autoencoder:',scoresMLPR)
+print(MLPR.predict([[1.0,0,0,0,0,0,0,0,0,0,0,0,0]]))
 
 #X['PCA1']=pca.transform(X)[:,0]
 XPCA1=pca.transform(X)[:,0]
@@ -53,10 +64,10 @@ def myplot(score,coeff,labels=['clinton_margin','PER_CAPITA_INCOME','UNINSURED_R
             plt.text(coeff[i,0]* 1.15, coeff[i,1] * 1.15, labels[i], color = 'g', ha = 'center', va = 'center')
 
 #print(Y)
-print(pca.explained_variance_ratio_)
-print(pca.singular_values_)
-print(X.corr())
-print(pca.components_)
+#print(pca.explained_variance_ratio_)
+#print(pca.singular_values_)
+#print(X.corr())
+#print(pca.components_)
 myplot(X_new[:,0:2],np.transpose(pca.components_[0:2, :]))
 plt.xlim(-1,1)
 plt.ylim(-1,1)
