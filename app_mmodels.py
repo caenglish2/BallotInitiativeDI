@@ -27,6 +27,7 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import BayesianRidge
+from sklearn.linear_model import LogisticRegression
 import heapq
 from bokeh.models import LogColorMapper, LogTicker, ColorBar
 palette=['#ff0000','#ff1a1a','#ff3333','#ff4d4d','#ff6666','#ff8080','#ff9999','#ffb3b3','#ffcccc','#ffe6e6','#bfbfbf','#e6e6ff','#ccccff','#b3b3ff','#9999ff','#8080ff','#6666ff','#4d4dff','#3333ff','#1a1aff','#0000ff']
@@ -36,19 +37,16 @@ app = Flask(__name__)
 
 def plot(location, predictions,state_name):
 	from bokeh.sampledata.us_counties import data as counties
-	palette.reverse()
 	counties = {code: county for code, county in counties.items() if county["state"] in [state_name]}
 	county_xs = [county["lons"] for county in counties.values()]
 	county_ys = [county["lats"] for county in counties.values()]
 	county_names = [county['name'] for county in counties.values()]#Make sure names match with data
 	print(county_names)
-	county_rates = [unemployment[county_id] for county_id in counties]#These would be the predictions
 	color_mapper = LinearColorMapper(palette=palette,low=25, high=75)
 	data=dict(x=county_xs,y=county_ys,name=county_names,rate=predictions,)
 	TOOLS = "pan,wheel_zoom,reset,hover,save"
 
 	p = figure(title="Vote Preference Predictions", tools=TOOLS, plot_width=900,
-	#x_axis_location=None, y_axis_location=None,tooltips=[("Name", "@name"), ("Unemployment rate)", "@rate%"), ("(Long, Lat)", "($x, $y)")])
 	x_axis_location=None, y_axis_location=None,tooltips=[("Name", "@name"), ("Yes vote (percent)", "@rate%")])
 
 	color_bar = ColorBar(color_mapper=color_mapper, ticker=LogTicker(),label_standoff=12, border_line_color=None, location=(0,0))
@@ -56,9 +54,9 @@ def plot(location, predictions,state_name):
 
 	p.grid.grid_line_color = None
 	p.hover.point_policy = "follow_mouse"
-
+	
 	p.patches('x', 'y', source=data,fill_color={'field': 'rate', 'transform': color_mapper},fill_alpha=1.0, line_color="white", line_width=0.5)
-
+	
 	script, div = components(p)
 	return script, div
 
@@ -128,7 +126,6 @@ def analysis(issue, state, county):
 		corr_s=spearmanr(data_train.ix[:,i],data['PERCENT'])
 		pcc.append(corr_p[0]);scc.append(corr_s[0])
 		pcc_p.append(corr_p[1]);scc_p.append(corr_s[1])
-		#print(corr_p, corr_s)
 
 	GLR = LinearRegression()
 	GLR.fit(data_train, y_train)
@@ -164,7 +161,7 @@ def analysis(issue, state, county):
 	KNN_R2=KNN.score(data_train, y_train)
 	scoresKNN = cross_val_score(KNN, data_train, y_train, cv=2)
 
-	RFR = RandomForestRegressor(n_estimators=500, max_depth=12)
+	RFR = RandomForestRegressor(n_estimators=500, max_depth=12, n_jobs=1)
 	RFR.fit(data_train, y_train)
 	scoresRFR = cross_val_score(RFR, data_train, y_train, cv=2)
 	mod3=RFR.predict(data_train)
@@ -207,17 +204,21 @@ def analysis(issue, state, county):
 	statename_to_abbr = {'District of Columbia': 'DC','Alabama': 'AL','Montana': 'MT','Alaska': 'AK','Nebraska': 'NE','Arizona': 'AZ','Nevada': 'NV','Arkansas': 'AR','NewHampshire': 'NH','California': 'CA','NewJersey': 'NJ','Colorado': 'CO','NewMexico': 'NM','Connecticut': 'CT','NewYork': 'NY','Delaware': 'DE','NorthCarolina': 'NC','Florida': 'FL','NorthDakota': 'ND','Georgia': 'GA','Ohio': 'OH','Hawaii': 'HI','Oklahoma': 'OK','Idaho': 'ID','Oregon': 'OR','Illinois': 'IL','Pennsylvania': 'PA','Indiana': 'IN','RhodeIsland': 'RI','Iowa': 'IA','SouthCarolina': 'SC','Kansas': 'KS','SouthDakota': 'SD','Kentucky': 'KY','Tennessee': 'TN','Louisiana': 'LA','Texas': 'TX','Maine': 'ME','Utah': 'UT','Maryland': 'MD','Vermont': 'VT','Massachusetts': 'MA','Virginia': 'VA','Michigan': 'MI','Washington': 'WA','Minnesota': 'MN','WestVirginia': 'WV','Mississippi': 'MS','Wisconsin': 'WI','Missouri': 'MO','Wyoming': 'WY'}
 	keys=counties.keys()
 	locations=[]
-	state_id_abbr_conv={'AL':1,'AZ':4,'AR':5,'CA':6,'CO':8,'CT':9,'DE':10,'FL':12,'GA':13,'ID':16,'IL':17,'IN':18,'KS':20,'LA':22,'ME':23,'MD':24,'MA':25,'MS':28,'MO':29,'NE':31,'NJ':34,'NY':36,'NC':37,'OH':39,'OR':41,'PA':42,'RI':44,'SC':45,'SD':46,'TN':47,'TX':48,'UT':49,'VT':50,'WV':54,'WI':55}
+	state_id_abbr_conv={'AL':1,'AZ':4,'AR':5,'CA':6,'CO':8,'CT':9,'DE':10,'FL':12,'GA':13,'ID':16,'IL':17,'IN':18,'IA':19,'KS':20,'KY':21,'LA':22,'ME':23,'MD':24,'MA':25,'MI':26,'MN':27,'MS':28,'MO':29,'MT':30,'NE':31,'NV':32,'NH':33,'NJ':34,'NM':35,'NY':36,'NC':37,'ND':38,'OH':39,'OK':40,'OR':41,'PA':42,'RI':44,'SC':45,'SD':46,'TN':47,'TX':48,'UT':49,'VT':50,'VA':51,'WV':54,'WY':56,'WI':55,'WA':53}
 	state_id=state_id_abbr_conv[state]
 	for i in keys:
-		if i[0]==state_id:#Need to add 2-AK, 11-DC (no data),15 HI - Maui, 19-IO no data, 21 KY -no data, 26 -MI need data, MN - need data, 30 - MT need data, 32 NV - need data, 33 - NH need data, NM - need data, 38 - ND need data, 40 -OK need data, 51, VA - need data (download), 53 WA need data
+		if i[0]==state_id:#Need to add 2-AK, 11-DC (no data),15 HI - Maui, 51, 53 WA need data
 			name=counties[i]['detailed name'].split(',')
-			name[0]=name[0].replace(' ','').replace('County','').replace('Parish','')
+			if state_id == 51:
+				print(name[0])
+				name[0]=name[0].replace(' ','').replace('County','').replace('city','')
+				print(name[0])
+			else:
+				name[0]=name[0].replace(' ','').replace('County','').replace('Parish','')
 			name[1]=name[1].replace(' ','')
 			location=statename_to_abbr[name[1]]+'_'+name[0].replace('County','').replace('.','').upper()
 			locations.append(location)
 
-	#print(locations)
 	#location=str(state).upper()+"_"+str(county).upper()
 	county_lookup=pd.read_csv('data_county_lookup.csv')
 	county_lookup['clinton_margin']=county_lookup['CLINTON_%']-county_lookup['TRUMP_%']
@@ -226,6 +227,7 @@ def analysis(issue, state, county):
 	predictions=[];lrr_predictions=[]
 	state_name=locations[0][:2].lower()
 	for place in locations:
+		print(place)
 		PredictX=county_lookup[county_lookup['STATE_COUNTY']==place]
 		PredictX=PredictX.ix[:, ['clinton_margin','PER_CAPITA_INCOME','UNINSURED_RATE','SOME_COLLEGE','AFAMERPER','WHITESPER','ASIANPER','HISPANICPER','PERSENIORS','POVERTY_RATE','INCINEQUALITY','UNEMP_RATE','RURAL_POP','CITIZENS']]
 		if model_code=='GLR': GLR_predict=GLR.predict(PredictX)*100.0
@@ -236,6 +238,7 @@ def analysis(issue, state, county):
 		elif model_code=='KNN': GLR_predict=KNN.predict(PredictX)*100.0
 		elif model_code=='RFR': GLR_predict=RFR.predict(PredictX)*100.0
 		predictions.append(round(GLR_predict[0]))
+	print(locations, predictions)
 	script, div=plot(locations, predictions, state_name)
 	script_coor, div_corr=plot_corr(pcc)
 
