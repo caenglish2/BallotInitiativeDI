@@ -1,9 +1,10 @@
 #!/bin/python
 
 import os
-name='NV_CARSON'
+name='VA_FAIRFAX'
 print('2016 election')
 os.system('grep %s county_votes/2016_votes.dat'%name)
+print('Per Capita Income')
 os.system('grep %s avg_income/per_capita_income.csv'%name)
 print('Uninsured Per')
 os.system('grep %s avg_income/uninsured_rate3.dat'%name)
